@@ -45,7 +45,8 @@ def create_order(user_id: str, order_create: schemas.OrderCreate, db: Session = 
             order_id=db_order.id,
             product_id=item.product_id,
             quantity=item.quantity,
-            price=item.product.price
+            price=item.product.price,
+            selected_specs=item.selected_specs  # Pass specs from cart to order
         )
         db.add(order_item)
         

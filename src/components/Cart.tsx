@@ -46,7 +46,7 @@ export function Cart({ isOpen, onClose, items, onRemoveItem, onUpdateQuantity, o
           ) : (
             <div className="space-y-4">
               {items.map(item => (
-                <div key={item.product.id} className="flex gap-4 bg-gray-50 p-4 rounded-xl hover:bg-gray-100 transition-colors">
+                <div key={`${item.product.id}-${JSON.stringify(item.selectedSpecs || {})}`} className="flex gap-4 bg-gray-50 p-4 rounded-xl hover:bg-gray-100 transition-colors">
                   <img
                     src={item.product.image}
                     alt={item.product.name}
@@ -62,6 +62,16 @@ export function Cart({ isOpen, onClose, items, onRemoveItem, onUpdateQuantity, o
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
+                    {/* 显示已选规格 */}
+                    {item.selectedSpecs && Object.keys(item.selectedSpecs).length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {Object.entries(item.selectedSpecs).map(([key, value]) => (
+                          <span key={key} className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded">
+                            {key}: {value}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <p className="text-red-600 mb-3">¥{item.product.price}</p>
                     <div className="flex items-center gap-3">
                       <button
@@ -104,7 +114,7 @@ export function Cart({ isOpen, onClose, items, onRemoveItem, onUpdateQuantity, o
                 </div>
               </div>
             </div>
-            <button 
+            <button
               onClick={onCheckout}
               className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3.5 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
             >

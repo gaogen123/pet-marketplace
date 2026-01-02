@@ -56,6 +56,11 @@ class Product(ProductBase):
             return [s.spec for s in v]
         return v
 
+class ProductList(BaseModel):
+    total: int
+    items: List[Product]
+    page: int
+    size: int
 
 class UserBase(BaseModel):
     username: str
@@ -64,6 +69,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
     phone: Optional[str] = None
+    role: Optional[str] = "user"
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
@@ -80,15 +86,37 @@ class User(UserBase):
     id: str
     phone: Optional[str] = None
     avatar: Optional[str] = None
+    role: str
     register_time: datetime
 
     class Config:
         orm_mode = True
         from_attributes = True
 
+class AdminUserBase(BaseModel):
+    username: str
+    email: str
+
+class AdminUserCreate(AdminUserBase):
+    password: str
+
+class AdminUserLogin(BaseModel):
+    identifier: str
+    password: str
+
+class AdminUser(AdminUserBase):
+    id: str
+    avatar: Optional[str] = None
+    create_time: datetime
+    last_login: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
 class CartItemBase(BaseModel):
     product_id: str
     quantity: int
+    selected_specs: Optional[dict] = None
 
 class CartItemCreate(CartItemBase):
     pass
@@ -99,9 +127,20 @@ class CartItemUpdate(BaseModel):
 class CartItem(CartItemBase):
     id: int
     product: Product
+    selected_specs: Optional[dict] = None
 
     class Config:
         from_attributes = True
+
+    @field_validator('selected_specs', mode='before')
+    @classmethod
+    def parse_specs(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except:
+                return {}
+        return v
 
 class FavoriteBase(BaseModel):
     product_id: str
@@ -121,13 +160,25 @@ class OrderItemBase(BaseModel):
     product_id: str
     quantity: int
     price: float
+    selected_specs: Optional[dict] = None
 
 class OrderItem(OrderItemBase):
     id: int
     product: Product
+    selected_specs: Optional[dict] = None
 
     class Config:
         from_attributes = True
+
+    @field_validator('selected_specs', mode='before')
+    @classmethod
+    def parse_specs(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except:
+                return {}
+        return v
 
 class OrderBase(BaseModel):
     payment_method: str
@@ -143,6 +194,20 @@ class OrderCreate(BaseModel):
 
 from pydantic import model_validator
 import json
+
+class UserResetPassword(BaseModel):
+    username: str
+    email: str
+    new_password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user_id: str
+    payment_method: str
+    total_amount: float
+    create_time: datetime
+    status: str
 
 class Order(BaseModel):
     id: str
@@ -167,3 +232,32 @@ class Order(BaseModel):
             except:
                 pass
         return self
+
+class CategoryBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = "blue"
+    sort_order: Optional[int] = 0
+    is_active: Optional[bool] = True
+
+class Category(CategoryBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+class BannerBase(BaseModel):
+    title: str
+    image_url: str
+    description: Optional[str] = None
+    link_url: Optional[str] = None
+    sort_order: Optional[int] = 0
+    is_active: Optional[bool] = True
+
+class Banner(BannerBase):
+    id: int
+    create_time: datetime
+
+    class Config:
+        from_attributes = True

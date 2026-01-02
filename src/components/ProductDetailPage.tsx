@@ -12,11 +12,11 @@ interface ProductDetailPageProps {
   onViewProduct: (product: Product) => void;
 }
 
-export function ProductDetailPage({ 
-  product, 
-  isFavorite, 
-  onBack, 
-  onAddToCart, 
+export function ProductDetailPage({
+  product,
+  isFavorite,
+  onBack,
+  onAddToCart,
   onToggleFavorite,
   allProducts,
   onViewProduct
@@ -34,9 +34,46 @@ export function ProductDetailPage({
     .slice(0, 4);
 
   const handleAddToCart = () => {
-    for (let i = 0; i < quantity; i++) {
-      onAddToCart(product);
+    // Check if all specs are selected
+    const groups: { [key: string]: string[] } = {};
+    if (product.specs) {
+      product.specs.forEach(spec => {
+        const separator = spec.includes('：') ? '：' : ':';
+        const parts = spec.split(separator);
+        if (parts.length >= 2 && parts[0].trim() !== '') {
+          const name = parts[0].trim();
+          if (!groups[name]) groups[name] = [];
+        } else {
+          if (!groups['其他']) groups['其他'] = [];
+        }
+      });
     }
+
+    const requiredGroups = Object.keys(groups);
+    const missingSpecs = requiredGroups.filter(group => !selectedSpecs[group]);
+
+    if (missingSpecs.length > 0) {
+      // If there are missing specs, maybe alert user or just select first one?
+      // For better UX, we should probably auto-select first option on mount or alert here.
+      // Let's alert for now.
+      alert(`请选择 ${missingSpecs.join(', ')}`);
+      return;
+    }
+
+    const productWithSpecs = {
+      ...product,
+      selectedSpecs // Pass selected specs
+    };
+
+    for (let i = 0; i < quantity; i++) {
+      onAddToCart(productWithSpecs);
+    }
+  };
+
+  const [selectedSpecs, setSelectedSpecs] = useState<{ [key: string]: string }>({});
+
+  const handleSpecSelect = (name: string, value: string) => {
+    setSelectedSpecs(prev => ({ ...prev, [name]: value }));
   };
 
   const handlePrevImage = () => {
@@ -69,9 +106,9 @@ export function ProductDetailPage({
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* 商品主要信息 */}
         <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 mb-8">
-          <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+          <div className="grid md:grid-cols-5 gap-8 lg:gap-12">
             {/* 左侧图片轮播 */}
-            <div>
+            <div className="md:col-span-2">
               {/* 主图 */}
               <div className="relative mb-4 group">
                 <img
@@ -79,7 +116,7 @@ export function ProductDetailPage({
                   alt={`${product.name} - ${currentImageIndex + 1}`}
                   className="w-full aspect-square object-cover rounded-xl shadow-lg"
                 />
-                
+
                 {/* 评分标签 */}
                 <div className="absolute top-4 right-4 bg-white px-3 py-2 rounded-full shadow-md">
                   <div className="flex items-center gap-1">
@@ -112,11 +149,10 @@ export function ProductDetailPage({
                         <button
                           key={index}
                           onClick={() => handleThumbnailClick(index)}
-                          className={`w-2 h-2 rounded-full transition-all ${
-                            index === currentImageIndex
-                              ? 'bg-white w-6'
-                              : 'bg-white/50 hover:bg-white/75'
-                          }`}
+                          className={`w-2 h-2 rounded-full transition-all ${index === currentImageIndex
+                            ? 'bg-white w-6'
+                            : 'bg-white/50 hover:bg-white/75'
+                            }`}
                           aria-label={`切换到第${index + 1}张图片`}
                         />
                       ))}
@@ -132,11 +168,10 @@ export function ProductDetailPage({
                     <button
                       key={index}
                       onClick={() => handleThumbnailClick(index)}
-                      className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                        index === currentImageIndex
-                          ? 'border-blue-500 ring-2 ring-blue-200'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                      className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${index === currentImageIndex
+                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        : 'border-gray-200 hover:border-gray-300'
+                        }`}
                     >
                       <img
                         src={image}
@@ -153,7 +188,7 @@ export function ProductDetailPage({
             </div>
 
             {/* 右侧信息 */}
-            <div className="flex flex-col">
+            <div className="flex flex-col md:col-span-3">
               <div className="mb-6">
                 <div className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm mb-3">
                   {product.category}
@@ -183,6 +218,57 @@ export function ProductDetailPage({
                   </div>
                 </div>
               </div>
+
+              {/* 规格选择 */}
+              {product.specs && product.specs.length > 0 && (
+                <div className="mb-6 pb-6 border-b">
+                  {(() => {
+                    // Parse specs into groups
+                    const groups: { [key: string]: string[] } = {};
+                    product.specs.forEach(spec => {
+                      const separator = spec.includes('：') ? '：' : ':';
+                      const parts = spec.split(separator);
+                      if (parts.length >= 2 && parts[0].trim() !== '') {
+                        const name = parts[0].trim();
+                        const value = parts.slice(1).join(separator).trim();
+                        if (!groups[name]) groups[name] = [];
+                        groups[name].push(value);
+                      } else {
+                        const value = spec.replace(/^[:：]/, '').trim();
+                        if (!groups['其他']) groups['其他'] = [];
+                        groups['其他'].push(value);
+                      }
+                    });
+
+                    // Initialize selected specs if not already set
+                    // Note: We can't use useState inside this render function, so we need to move this logic up or use a separate component.
+                    // But for simplicity in this replacement, we will just render the UI and assume state is managed.
+                    // Actually, we need to lift the state up.
+                    return Object.entries(groups).map(([name, values], index) => (
+                      <div key={index} className="mb-4 last:mb-0">
+                        <h3 className="text-sm text-gray-900 font-medium mb-2">{name}</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {values.map((value, vIndex) => {
+                            const isSelected = selectedSpecs[name] === value;
+                            return (
+                              <button
+                                key={vIndex}
+                                onClick={() => handleSpecSelect(name, value)}
+                                className={`px-4 py-2 rounded-lg text-sm border transition-all ${isSelected
+                                  ? 'bg-blue-50 border-blue-500 text-blue-600 font-medium'
+                                  : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                  }`}
+                              >
+                                {value}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              )}
 
               {/* 数量选择 */}
               <div className="mb-6">
@@ -239,11 +325,10 @@ export function ProductDetailPage({
               <div className="flex gap-3 mt-auto">
                 <button
                   onClick={() => onToggleFavorite(product.id)}
-                  className={`flex-shrink-0 px-6 py-4 rounded-lg border-2 transition-all ${
-                    isFavorite
-                      ? 'border-pink-500 bg-pink-50 text-pink-600'
-                      : 'border-gray-300 hover:border-pink-500 hover:bg-pink-50 hover:text-pink-600'
-                  }`}
+                  className={`flex-shrink-0 px-6 py-4 rounded-lg border-2 transition-all ${isFavorite
+                    ? 'border-pink-500 bg-pink-50 text-pink-600'
+                    : 'border-gray-300 hover:border-pink-500 hover:bg-pink-50 hover:text-pink-600'
+                    }`}
                 >
                   <Heart className={`w-6 h-6 ${isFavorite ? 'fill-pink-500' : ''}`} />
                 </button>
@@ -265,31 +350,28 @@ export function ProductDetailPage({
             <div className="flex gap-8 px-8">
               <button
                 onClick={() => setSelectedTab('detail')}
-                className={`py-4 border-b-2 transition-colors ${
-                  selectedTab === 'detail'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+                className={`py-4 border-b-2 transition-colors ${selectedTab === 'detail'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
               >
                 商品详情
               </button>
               <button
                 onClick={() => setSelectedTab('specs')}
-                className={`py-4 border-b-2 transition-colors ${
-                  selectedTab === 'specs'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+                className={`py-4 border-b-2 transition-colors ${selectedTab === 'specs'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
               >
                 规格参数
               </button>
               <button
                 onClick={() => setSelectedTab('reviews')}
-                className={`py-4 border-b-2 transition-colors ${
-                  selectedTab === 'reviews'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+                className={`py-4 border-b-2 transition-colors ${selectedTab === 'reviews'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
               >
                 用户评价
               </button>
@@ -310,13 +392,46 @@ export function ProductDetailPage({
             )}
 
             {selectedTab === 'specs' && product.specs && (
-              <div className="space-y-3">
-                {product.specs.map((spec, index) => (
-                  <div key={index} className="flex items-start gap-3 py-3 border-b last:border-0">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                    <span className="text-gray-700">{spec}</span>
-                  </div>
-                ))}
+              <div className="space-y-6">
+                {(() => {
+                  // Parse specs into groups
+                  const groups: { [key: string]: string[] } = {};
+                  product.specs.forEach(spec => {
+                    const separator = spec.includes('：') ? '：' : ':';
+                    const parts = spec.split(separator);
+                    if (parts.length >= 2 && parts[0].trim() !== '') {
+                      const name = parts[0].trim();
+                      const value = parts.slice(1).join(separator).trim();
+                      if (!groups[name]) groups[name] = [];
+                      groups[name].push(value);
+                    } else {
+                      // Handle cases like ":Value" or just "Value"
+                      const value = spec.replace(/^[:：]/, '').trim();
+                      if (!groups['其他']) groups['其他'] = [];
+                      groups['其他'].push(value);
+                    }
+                  });
+
+                  if (Object.keys(groups).length === 0) {
+                    return <div className="text-gray-500 text-center py-8">暂无规格参数</div>;
+                  }
+
+                  return Object.entries(groups).map(([name, values], index) => (
+                    <div key={index} className="border-b last:border-0 pb-4 last:pb-0">
+                      <h3 className="text-lg font-medium text-gray-900 mb-3">{name}</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {values.map((value, vIndex) => (
+                          <span
+                            key={vIndex}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm border border-gray-200"
+                          >
+                            {value}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                })()}
               </div>
             )}
 

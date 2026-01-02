@@ -30,11 +30,9 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(database.get_d
     db_user = models.User(
         username=user.username,
         email=user.email,
-        password=hashed_password  # Note: You need to add password column to User model if not exists, or handle it
+        password=hashed_password,
+        role=user.role
     )
-    # Wait, I need to check if User model has password field. 
-    # Looking at models.py from previous turn, it does NOT have a password field!
-    # I must update models.py first.
     
     db.add(db_user)
     db.commit()
@@ -54,6 +52,8 @@ def login_user(user: schemas.UserLogin, db: Session = Depends(database.get_db)):
         raise HTTPException(status_code=400, detail="Incorrect email/phone or password")
         
     return db_user
+
+
 
 @router.put("/{user_id}", response_model=schemas.User)
 def update_user(user_id: str, user_update: schemas.UserUpdate, db: Session = Depends(database.get_db)):
@@ -98,4 +98,18 @@ def upload_avatar(user_id: str, file: UploadFile = File(...), db: Session = Depe
     
     db.commit()
     db.refresh(db_user)
+    db.commit()
+    db.refresh(db_user)
     return db_user
+
+@router.post("/reset-password")
+def reset_password(user_data: schemas.UserResetPassword, db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.username == user_data.username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.email != user_data.email:
+        raise HTTPException(status_code=400, detail="Email does not match")
+    
+    user.password = get_password_hash(user_data.new_password)
+    db.commit()
+    return {"message": "Password updated successfully"}

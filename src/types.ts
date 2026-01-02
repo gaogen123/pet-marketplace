@@ -15,6 +15,7 @@ export interface Product {
 export interface CartItem {
   product: Product;
   quantity: number;
+  selectedSpecs?: { [key: string]: string };
 }
 
 export type SortOption = 'default' | 'price-asc' | 'price-desc' | 'sales' | 'rating';
@@ -47,5 +48,6 @@ export interface User {
   email: string;
   phone?: string;
   avatar?: string;
+  role: string;
   register_time: string;
 }

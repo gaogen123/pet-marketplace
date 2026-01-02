@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from . import models, database
-from .routers import products, users, cart, favorites, orders
+from .routers import products, users, cart, favorites, orders, categories, banners
 
 models.Base.metadata.create_all(bind=database.engine)
 
@@ -11,6 +11,7 @@ app = FastAPI()
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "http://localhost:3001",
 ]
 
 app.add_middleware(
@@ -26,6 +27,8 @@ app.include_router(users.router)
 app.include_router(cart.router)
 app.include_router(favorites.router)
 app.include_router(orders.router)
+app.include_router(categories.router)
+app.include_router(banners.router)
 
 from fastapi.staticfiles import StaticFiles
 import os

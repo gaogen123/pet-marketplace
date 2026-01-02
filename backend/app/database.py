@@ -13,10 +13,26 @@ engine = create_engine(
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# Admin Database Config
+SQLALCHEMY_ADMIN_DATABASE_URL = os.getenv("ADMIN_DATABASE_URL", "mysql+pymysql://root@localhost/pet_marketplace_admin")
+
+admin_engine = create_engine(
+    SQLALCHEMY_ADMIN_DATABASE_URL
+)
+SessionLocalAdmin = sessionmaker(autocommit=False, autoflush=False, bind=admin_engine)
+
 Base = declarative_base()
+AdminBase = declarative_base()
 
 def get_db():
     db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def get_admin_db():
+    db = SessionLocalAdmin()
     try:
         yield db
     finally:

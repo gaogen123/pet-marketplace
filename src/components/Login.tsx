@@ -3,12 +3,14 @@ import { Lock, Mail, Eye, EyeOff, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface LoginProps {
-  onLogin: (email: string, password: string) => void;
-  onSwitchToRegister: () => void;
+  onLoginSuccess: (user: any) => void;
+  onRegisterClick: () => void;
   onClose: () => void;
+  onForgotPasswordClick: () => void;
+  onAdminLoginClick: () => void;
 }
 
-export function Login({ onLogin, onSwitchToRegister, onClose }: LoginProps) {
+export function Login({ onLoginSuccess, onRegisterClick, onClose, onForgotPasswordClick, onAdminLoginClick }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,18 +24,32 @@ export function Login({ onLogin, onSwitchToRegister, onClose }: LoginProps) {
       return;
     }
 
-    // if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    //   toast.error('请输入有效的邮箱地址');
-    //   return;
-    // }
-
     setIsLoading(true);
 
-    // 模拟登录延迟
-    setTimeout(() => {
-      onLogin(email, password);
+    try {
+      const response = await fetch('http://localhost:8000/users/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identifier: email,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || '登录失败');
+      }
+
+      onLoginSuccess(data);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '登录失败');
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -101,7 +117,11 @@ export function Login({ onLogin, onSwitchToRegister, onClose }: LoginProps) {
               <input type="checkbox" className="w-4 h-4 text-blue-600 rounded" />
               <span className="text-sm text-gray-600">记住我</span>
             </label>
-            <button type="button" className="text-sm text-blue-600 hover:text-blue-700">
+            <button
+              type="button"
+              onClick={onForgotPasswordClick}
+              className="text-sm text-blue-600 hover:text-blue-700"
+            >
               忘记密码？
             </button>
           </div>
@@ -130,10 +150,19 @@ export function Login({ onLogin, onSwitchToRegister, onClose }: LoginProps) {
         <div className="text-center">
           <span className="text-gray-600">还没有账户？</span>
           <button
-            onClick={onSwitchToRegister}
+            onClick={onRegisterClick}
             className="text-blue-600 hover:text-blue-700 ml-2"
           >
             立即注册
+          </button>
+        </div>
+
+        <div className="mt-4 text-center">
+          <button
+            onClick={onAdminLoginClick}
+            className="text-sm text-gray-400 hover:text-gray-600"
+          >
+            管理员入口
           </button>
         </div>
       </div>

@@ -20,11 +20,23 @@ def add_to_cart(user_id: str, item: schemas.CartItemCreate, db: Session = Depend
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # Check if item already exists in cart
-    db_item = db.query(models.CartItem).filter(
+    import json
+    specs_json = json.dumps(item.selected_specs) if item.selected_specs else None
+
+    # Check if item already exists in cart with same specs
+    # Note: This simple query might fail if specs_json is None and column is NULL vs empty string.
+    # But for now let's assume exact match on what we store.
+    query = db.query(models.CartItem).filter(
         models.CartItem.user_id == user_id,
         models.CartItem.product_id == item.product_id
-    ).first()
+    )
+    
+    if specs_json:
+        query = query.filter(models.CartItem.selected_specs == specs_json)
+    else:
+        query = query.filter(models.CartItem.selected_specs.is_(None))
+        
+    db_item = query.first()
 
     if db_item:
         db_item.quantity += item.quantity
@@ -32,7 +44,8 @@ def add_to_cart(user_id: str, item: schemas.CartItemCreate, db: Session = Depend
         db_item = models.CartItem(
             user_id=user_id,
             product_id=item.product_id,
-            quantity=item.quantity
+            quantity=item.quantity,
+            selected_specs=specs_json
         )
         db.add(db_item)
     

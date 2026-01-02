@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Toaster, toast } from 'sonner@2.0.3';
+import { Toaster, toast } from 'sonner';
 import { Header } from './components/Header';
 import { Banner } from './components/Banner';
 import { CategoryFilter } from './components/CategoryFilter';
@@ -15,10 +15,24 @@ import { UserProfile } from './components/UserProfile';
 import { FavoritesPage } from './components/FavoritesPage';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
+import { ForgotPassword } from './components/ForgotPassword';
+import { AdminLogin } from './components/AdminLogin';
+import { AdminDashboard } from './components/AdminDashboard';
 import { Product, CartItem, SortOption, Address, Order, User } from './types';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'detail' | 'checkout' | 'success' | 'orders' | 'orderDetail' | 'profile' | 'favorites'>('home');
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [currentPage, setCurrentPage] = useState<'home' | 'detail' | 'checkout' | 'success' | 'orders' | 'orderDetail' | 'profile' | 'favorites' | 'adminDashboard'>(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      const userData = JSON.parse(savedUser);
+      if (userData.role === 'admin') return 'adminDashboard';
+    }
+    return 'home';
+  });
   const [selectedCategory, setSelectedCategory] = useState<string>('全部');
   const [sortOption, setSortOption] = useState<SortOption>('default');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -29,10 +43,16 @@ export default function App() {
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<Order | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    size: 12,
+    total: 0
+  });
 
   // Fetch products from backend with search and filter
   useEffect(() => {
@@ -41,12 +61,21 @@ export default function App() {
     if (selectedCategory && selectedCategory !== '全部') params.append('category', selectedCategory);
     if (user) params.append('user_id', user.id);
 
+    // Pagination
+    params.append('skip', ((pagination.page - 1) * pagination.size).toString());
+    params.append('limit', pagination.size.toString());
+
     // Debounce search
     const timer = setTimeout(() => {
       fetch(`http://localhost:8000/products/?${params.toString()}`)
         .then(res => res.json())
         .then(data => {
-          setProducts(data);
+          if (data.items) {
+            setProducts(data.items);
+            setPagination(prev => ({ ...prev, total: data.total }));
+          } else {
+            setProducts(data);
+          }
         })
         .catch(err => {
           console.error('Error fetching products:', err);
@@ -55,7 +84,28 @@ export default function App() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, selectedCategory]);
+  }, [searchTerm, selectedCategory, pagination.page]);
+
+  // Check URL for productId on mount to support direct linking
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get('productId');
+    if (productId) {
+      fetch(`http://localhost:8000/products/${productId}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Product not found');
+          return res.json();
+        })
+        .then(product => {
+          setSelectedProduct(product);
+          setCurrentPage('detail');
+        })
+        .catch(err => {
+          console.error('Error loading product from URL:', err);
+          toast.error('无法加载指定商品');
+        });
+    }
+  }, []);
 
   // Fetch favorites from backend when user changes
   useEffect(() => {
@@ -156,7 +206,7 @@ export default function App() {
       }
     });
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product & { selectedSpecs?: { [key: string]: string } }) => {
     // 检查是否登录
     if (!user) {
       toast.error('请先登录后再加入购物车');
@@ -169,7 +219,11 @@ export default function App() {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ product_id: product.id, quantity: 1 }),
+      body: JSON.stringify({
+        product_id: product.id,
+        quantity: 1,
+        selected_specs: product.selectedSpecs || null
+      }),
     })
       .then(res => {
         if (!res.ok) throw new Error('Failed to add to cart');
@@ -184,7 +238,8 @@ export default function App() {
       .then(data => {
         const formattedCart = data.map((item: any) => ({
           product: item.product,
-          quantity: item.quantity
+          quantity: item.quantity,
+          selectedSpecs: item.selected_specs || {}
         }));
         setCartItems(formattedCart);
       })
@@ -641,7 +696,10 @@ export default function App() {
         onOrdersClick={handleViewOrders}
         onFavoritesClick={handleViewFavorites}
         searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
+        onSearchChange={(term) => {
+          setSearchTerm(term);
+          setPagination(prev => ({ ...prev, page: 1 }));
+        }}
         user={user}
         onLoginClick={() => setShowLogin(true)}
         onLogout={handleLogout}
@@ -661,7 +719,10 @@ export default function App() {
 
             <CategoryFilter
               selectedCategory={selectedCategory}
-              onCategoryChange={setSelectedCategory}
+              onCategoryChange={(category) => {
+                setSelectedCategory(category);
+                setPagination(prev => ({ ...prev, page: 1 }));
+              }}
             />
 
             <SortBar
@@ -687,6 +748,59 @@ export default function App() {
               <div className="text-center py-16">
                 <p className="text-gray-500 text-xl mb-2">😢 没有找到相关商品</p>
                 <p className="text-gray-400 text-sm">试试其他关键词或分类吧</p>
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {pagination.total > 0 && (
+              <div className="flex justify-center items-center mt-8 gap-2">
+                <button
+                  onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                  disabled={pagination.page === 1}
+                  className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                >
+                  上一页
+                </button>
+
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.min(5, Math.ceil(pagination.total / pagination.size)) }, (_, i) => {
+                    // Simple logic to show some pages. For a real app, complex logic for many pages is needed.
+                    // Here we just show first 5 or so for simplicity, or we can implement a sliding window.
+                    // Let's implement a simple sliding window or just show current page context.
+                    // For now, let's just show all pages if small, or a subset.
+                    const totalPages = Math.ceil(pagination.total / pagination.size);
+                    let startPage = Math.max(1, pagination.page - 2);
+                    if (startPage + 4 > totalPages) {
+                      startPage = Math.max(1, totalPages - 4);
+                    }
+                    const page = startPage + i;
+                    if (page > totalPages) return null;
+
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setPagination(prev => ({ ...prev, page }))}
+                        className={`w-10 h-10 rounded-lg border ${pagination.page === page
+                          ? 'bg-orange-500 text-white border-orange-500'
+                          : 'border-gray-300 hover:bg-gray-50'
+                          }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => setPagination(prev => ({ ...prev, page: Math.min(Math.ceil(pagination.total / pagination.size), prev.page + 1) }))}
+                  disabled={pagination.page >= Math.ceil(pagination.total / pagination.size)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                >
+                  下一页
+                </button>
+                <span className="ml-4 text-gray-500 text-sm">
+                  共 {pagination.total} 条商品
+                </span>
               </div>
             )}
           </main>
@@ -745,6 +859,12 @@ export default function App() {
           onAddToCart={addToCart}
           onBack={handleBackToHome}
         />
+      ) : currentPage === 'adminDashboard' && user ? (
+        <AdminDashboard
+          user={user}
+          onLogout={handleLogout}
+          onBackToHome={handleBackToHome}
+        />
       ) : null}
 
       <Cart
@@ -758,23 +878,60 @@ export default function App() {
 
       {showLogin && (
         <Login
-          onLogin={handleLogin}
-          onSwitchToRegister={() => {
+          onClose={() => setShowLogin(false)}
+          onRegisterClick={() => {
             setShowLogin(false);
             setShowRegister(true);
           }}
-          onClose={() => setShowLogin(false)}
+          onForgotPasswordClick={() => {
+            setShowLogin(false);
+            setShowForgotPassword(true);
+          }}
+          onLoginSuccess={(user) => {
+            setUser(user);
+            setShowLogin(false);
+            toast.success(`欢迎回来, ${user.username}!`);
+          }}
+          onAdminLoginClick={() => {
+            setShowLogin(false);
+            setShowAdminLogin(true);
+          }}
+        />
+      )}
+
+      {showAdminLogin && (
+        <AdminLogin
+          onClose={() => setShowAdminLogin(false)}
+          onLoginSuccess={(user) => {
+            setUser(user);
+            setShowAdminLogin(false);
+            setCurrentPage('adminDashboard');
+          }}
         />
       )}
 
       {showRegister && (
         <Register
-          onRegister={handleRegister}
-          onSwitchToLogin={() => {
+          onClose={() => setShowRegister(false)}
+          onLoginClick={() => {
             setShowRegister(false);
             setShowLogin(true);
           }}
-          onClose={() => setShowRegister(false)}
+          onRegisterSuccess={() => {
+            setShowRegister(false);
+            setShowLogin(true);
+            toast.success('注册成功，请登录');
+          }}
+        />
+      )}
+
+      {showForgotPassword && (
+        <ForgotPassword
+          onClose={() => setShowForgotPassword(false)}
+          onSuccess={() => {
+            setShowForgotPassword(false);
+            setShowLogin(true);
+          }}
         />
       )}
     </div>

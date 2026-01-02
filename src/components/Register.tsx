@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Lock, Mail, User, Eye, EyeOff, ShoppingBag, Phone } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface RegisterProps {
-  onRegister: (username: string, email: string, password: string, phone?: string) => void;
-  onSwitchToLogin: () => void;
+  onRegisterSuccess: () => void;
+  onLoginClick: () => void;
   onClose: () => void;
 }
 
-export function Register({ onRegister, onSwitchToLogin, onClose }: RegisterProps) {
+export function Register({ onRegisterSuccess, onLoginClick, onClose }: RegisterProps) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -58,12 +58,33 @@ export function Register({ onRegister, onSwitchToLogin, onClose }: RegisterProps
     }
 
     setIsLoading(true);
-    
-    // 模拟注册延迟
-    setTimeout(() => {
-      onRegister(username, email, password, phone);
+
+    try {
+      const response = await fetch('http://localhost:8000/users/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          email,
+          password,
+          phone: phone || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || '注册失败');
+      }
+
+      onRegisterSuccess();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '注册失败');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -223,7 +244,7 @@ export function Register({ onRegister, onSwitchToLogin, onClose }: RegisterProps
         <div className="text-center">
           <span className="text-gray-600">已有账户？</span>
           <button
-            onClick={onSwitchToLogin}
+            onClick={onLoginClick}
             className="text-blue-600 hover:text-blue-700 ml-2"
           >
             立即登录

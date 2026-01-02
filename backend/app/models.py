@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text, Boolean, DateTime
 from sqlalchemy.orm import relationship
-from .database import Base
+from .database import Base, AdminBase
 from datetime import datetime
 import uuid
 
@@ -16,6 +16,8 @@ class User(Base):
     password = Column(String(255))
     phone = Column(String(20))
     avatar = Column(String(255))
+    role = Column(String(20), default="user")
+    is_active = Column(Boolean, default=True)
     register_time = Column(DateTime, default=datetime.utcnow)
     
     orders = relationship("Order", back_populates="user")
@@ -23,6 +25,17 @@ class User(Base):
     cart_items = relationship("CartItem", back_populates="user")
     favorites = relationship("Favorite", back_populates="user")
     search_history = relationship("SearchHistory", back_populates="user")
+
+class AdminUser(AdminBase):
+    __tablename__ = "admin_users"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    username = Column(String(50), unique=True, index=True)
+    email = Column(String(100), unique=True, index=True)
+    password = Column(String(255))
+    avatar = Column(String(255))
+    create_time = Column(DateTime, default=datetime.utcnow)
+    last_login = Column(DateTime)
 
 class Product(Base):
     __tablename__ = "products"
@@ -36,6 +49,7 @@ class Product(Base):
     rating = Column(Float, default=0.0)
     sales = Column(Integer, default=0)
     stock = Column(Integer, default=0)
+    status = Column(String(20), default="上架")
     
     images = relationship("ProductImage", back_populates="product")
     specs = relationship("ProductSpec", back_populates="product")
@@ -99,6 +113,7 @@ class OrderItem(Base):
     
     order = relationship("Order", back_populates="items")
     product = relationship("Product")
+    selected_specs = Column(Text) # Store as JSON string
 
 class CartItem(Base):
     __tablename__ = "cart_items"
@@ -107,6 +122,7 @@ class CartItem(Base):
     user_id = Column(String(36), ForeignKey("users.id"))
     product_id = Column(String(36), ForeignKey("products.id"))
     quantity = Column(Integer, default=1)
+    selected_specs = Column(Text) # Store as JSON string
     
     user = relationship("User", back_populates="cart_items")
     product = relationship("Product")
@@ -131,3 +147,26 @@ class SearchHistory(Base):
     search_time = Column(DateTime, default=datetime.utcnow)
     
     user = relationship("User", back_populates="search_history")
+
+class Category(AdminBase):
+    __tablename__ = "categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), unique=True, index=True)
+    description = Column(String(200))
+    icon = Column(String(100))
+    color = Column(String(50), default="blue")
+    sort_order = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+
+class Banner(AdminBase):
+    __tablename__ = "banners"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(100), index=True)
+    image_url = Column(Text)
+    description = Column(Text)
+    link_url = Column(String(255))
+    sort_order = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    create_time = Column(DateTime, default=datetime.utcnow)

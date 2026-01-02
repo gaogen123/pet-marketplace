@@ -72,7 +72,7 @@ export function Checkout({ order, onBack, onPay }: CheckoutProps) {
           <h2 className="text-xl text-gray-900 mb-4">商品清单</h2>
           <div className="space-y-4">
             {order.items.map(item => (
-              <div key={item.product.id} className="flex gap-4 pb-4 border-b last:border-0">
+              <div key={`${item.product.id}-${JSON.stringify((item as any).selectedSpecs || {})}`} className="flex gap-4 pb-4 border-b last:border-0">
                 <img
                   src={item.product.image}
                   alt={item.product.name}
@@ -80,6 +80,16 @@ export function Checkout({ order, onBack, onPay }: CheckoutProps) {
                 />
                 <div className="flex-1">
                   <h3 className="text-gray-900 mb-1">{item.product.name}</h3>
+                  {/* 显示已选规格 */}
+                  {(item as any).selectedSpecs && Object.keys((item as any).selectedSpecs).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-1">
+                      {Object.entries((item as any).selectedSpecs).map(([key, value]) => (
+                        <span key={key} className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded">
+                          {key}: {value as string}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <p className="text-sm text-gray-500">{item.product.description}</p>
                 </div>
                 <div className="text-right">
@@ -106,8 +116,8 @@ export function Checkout({ order, onBack, onPay }: CheckoutProps) {
                   key={method.id}
                   onClick={() => setSelectedPayment(method.id)}
                   className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${selectedPayment === method.id
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300'
+                    ? 'border-blue-600 bg-blue-50'
+                    : 'border-gray-200 hover:border-blue-300'
                     }`}
                 >
                   <div className="flex items-center justify-between">

@@ -12,7 +12,7 @@ router = APIRouter(
 from typing import List, Optional
 from sqlalchemy import or_
 
-@router.get("/", response_model=List[schemas.Product])
+@router.get("/", response_model=schemas.ProductList)
 def read_products(
     skip: int = 0, 
     limit: int = 100, 
@@ -34,8 +34,22 @@ def read_products(
             )
         )
         
+    total = query.count()
     products = query.offset(skip).limit(limit).all()
-    return products
+    
+    return {
+        "total": total,
+        "items": products,
+        "page": skip // limit + 1,
+        "size": limit
+    }
+
+@router.get("/{product_id}", response_model=schemas.Product)
+def read_product(product_id: str, db: Session = Depends(database.get_db)):
+    db_product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if db_product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return db_product
 
 @router.post("/search-history")
 def create_search_history(
