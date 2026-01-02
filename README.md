@@ -46,7 +46,8 @@ cd "Pet Marketplace"
 ```
 
 ### 🔗 相关仓库
-- **后台管理系统 (Backend/Admin)**: [pet-store-mrg](https://github.com/gaogen123/pet-store-mrg)
+- **前端商城仓库**: [pet-marketplace](https://github.com/gaogen123/pet-marketplace)
+- **后台管理系统仓库**: [pet-store-mrg](https://github.com/gaogen123/pet-store-mrg)
 
 ### 2. 前端配置
 ```bash
