@@ -21,8 +21,11 @@ export function ProductCard({ product, isFavorite, onAddToCart, onToggleFavorite
           热卖
         </div>
       )}
-      
-      <div className="relative overflow-hidden aspect-square">
+
+      <div
+        className="relative overflow-hidden aspect-square cursor-pointer"
+        onClick={() => onViewDetail(product)}
+      >
         <img
           src={product.image}
           alt={product.name}
@@ -47,7 +50,10 @@ export function ProductCard({ product, isFavorite, onAddToCart, onToggleFavorite
             <Heart className={`w-5 h-5 ${isFavorite ? 'fill-pink-500 text-pink-500' : 'text-gray-600'}`} />
           </button>
           <button
-            onClick={() => onViewDetail(product)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewDetail(product);
+            }}
             className="bg-white p-2.5 rounded-full hover:bg-blue-50 transition-all transform hover:scale-110"
           >
             <Eye className="w-5 h-5 text-gray-600" />
@@ -56,7 +62,12 @@ export function ProductCard({ product, isFavorite, onAddToCart, onToggleFavorite
       </div>
 
       <div className="p-4">
-        <h3 className="text-gray-900 mb-1 line-clamp-1">{product.name}</h3>
+        <h3
+          className="text-gray-900 mb-1 line-clamp-1 cursor-pointer hover:text-blue-600 transition-colors"
+          onClick={() => onViewDetail(product)}
+        >
+          {product.name}
+        </h3>
         <p className="text-sm text-gray-500 mb-3 line-clamp-2 h-10">{product.description}</p>
 
         <div className="flex items-center justify-between mb-3">

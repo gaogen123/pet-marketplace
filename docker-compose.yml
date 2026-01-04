@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: pet_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: pet_marketplace
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - pet-network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  marketplace-backend:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: mysql+pymysql://root:root@pet_mysql/pet_marketplace
+      ADMIN_DATABASE_URL: mysql+pymysql://root:root@pet_mysql/pet_marketplace_admin
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    networks:
+      - pet-network
+
+  marketplace-frontend:
+    build:
+      context: .
+    ports:
+      - "3000:3000"
+    depends_on:
+      - marketplace-backend
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - pet-network
+
+networks:
+  pet-network:
+    name: pet_shared_network
+    driver: bridge
+
+volumes:
+  mysql_data:

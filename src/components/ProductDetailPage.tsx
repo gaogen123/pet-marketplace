@@ -1,4 +1,5 @@
 import { ArrowLeft, Star, ShoppingCart, Heart, Package, Truck, Shield, Minus, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ProductCard } from './ProductCard';
 import { useState } from 'react';
 import { Product } from '../types';
 
@@ -10,6 +11,7 @@ interface ProductDetailPageProps {
   onToggleFavorite: (productId: string) => void;
   allProducts: Product[];
   onViewProduct: (product: Product) => void;
+  favorites: Set<string>;
 }
 
 export function ProductDetailPage({
@@ -19,18 +21,20 @@ export function ProductDetailPage({
   onAddToCart,
   onToggleFavorite,
   allProducts,
-  onViewProduct
+  onViewProduct,
+  favorites
 }: ProductDetailPageProps) {
   const [quantity, setQuantity] = useState(1);
-  const [selectedTab, setSelectedTab] = useState<'detail' | 'specs' | 'reviews'>('detail');
+  const [selectedTab, setSelectedTab] = useState<'detail' | 'specs' | 'reviews' | 'guarantee'>('detail');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // 获取商品图片数组
-  const images = product.images && product.images.length > 0 ? product.images : [product.image];
+  // 获取商品图片数组 (主图 + 更多图片)
+  const images = [product.image, ...(product.images || [])].filter(Boolean);
 
   // 推荐商品（同类商品）
   const recommendedProducts = allProducts
-    .filter(p => p.category === product.category && p.id !== product.id)
+    .filter(p => p.category === product.category && String(p.id) !== String(product.id))
     .slice(0, 4);
 
   const handleAddToCart = () => {
@@ -106,9 +110,9 @@ export function ProductDetailPage({
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* 商品主要信息 */}
         <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 mb-8">
-          <div className="grid md:grid-cols-5 gap-8 lg:gap-12">
+          <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
             {/* 左侧图片轮播 */}
-            <div className="md:col-span-2">
+            <div>
               {/* 主图 */}
               <div className="relative mb-4 group">
                 <img
@@ -188,7 +192,7 @@ export function ProductDetailPage({
             </div>
 
             {/* 右侧信息 */}
-            <div className="flex flex-col md:col-span-3">
+            <div className="flex flex-col">
               <div className="mb-6">
                 <div className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm mb-3">
                   {product.category}
@@ -240,10 +244,6 @@ export function ProductDetailPage({
                       }
                     });
 
-                    // Initialize selected specs if not already set
-                    // Note: We can't use useState inside this render function, so we need to move this logic up or use a separate component.
-                    // But for simplicity in this replacement, we will just render the UI and assume state is managed.
-                    // Actually, we need to lift the state up.
                     return Object.entries(groups).map(([name, values], index) => (
                       <div key={index} className="mb-4 last:mb-0">
                         <h3 className="text-sm text-gray-900 font-medium mb-2">{name}</h3>
@@ -302,25 +302,6 @@ export function ProductDetailPage({
                 </div>
               </div>
 
-              {/* 服务保障 */}
-              <div className="mb-8">
-                <h3 className="mb-3 text-gray-900">服务保障</h3>
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="flex items-center gap-3 bg-blue-50 p-3 rounded-lg">
-                    <Truck className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">全场包邮，48小时发货</span>
-                  </div>
-                  <div className="flex items-center gap-3 bg-green-50 p-3 rounded-lg">
-                    <Shield className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">7天无理由退换货</span>
-                  </div>
-                  <div className="flex items-center gap-3 bg-purple-50 p-3 rounded-lg">
-                    <Package className="w-5 h-5 text-purple-600 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">正品保证，假一赔十</span>
-                  </div>
-                </div>
-              </div>
-
               {/* 操作按钮 */}
               <div className="flex gap-3 mt-auto">
                 <button
@@ -358,6 +339,15 @@ export function ProductDetailPage({
                 商品详情
               </button>
               <button
+                onClick={() => setSelectedTab('reviews')}
+                className={`py-4 border-b-2 transition-colors ${selectedTab === 'reviews'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                用户评价
+              </button>
+              <button
                 onClick={() => setSelectedTab('specs')}
                 className={`py-4 border-b-2 transition-colors ${selectedTab === 'specs'
                   ? 'border-blue-600 text-blue-600'
@@ -367,13 +357,13 @@ export function ProductDetailPage({
                 规格参数
               </button>
               <button
-                onClick={() => setSelectedTab('reviews')}
-                className={`py-4 border-b-2 transition-colors ${selectedTab === 'reviews'
+                onClick={() => setSelectedTab('guarantee')}
+                className={`py-4 border-b-2 transition-colors ${selectedTab === 'guarantee'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
               >
-                用户评价
+                服务保障
               </button>
             </div>
           </div>
@@ -388,6 +378,13 @@ export function ProductDetailPage({
                   本产品采用优质材料制作，经过严格的质量检测，确保为您的宠物提供最好的体验。
                   我们承诺所有产品均为正品，支持7天无理由退换货，让您购物无忧。
                 </p>
+              </div>
+            )}
+
+            {selectedTab === 'reviews' && (
+              <div className="text-center py-12 text-gray-500">
+                <p className="mb-2">暂无用户评价</p>
+                <p className="text-sm">成为第一个评价此商品的用户吧！</p>
               </div>
             )}
 
@@ -435,10 +432,29 @@ export function ProductDetailPage({
               </div>
             )}
 
-            {selectedTab === 'reviews' && (
-              <div className="text-center py-12 text-gray-500">
-                <p className="mb-2">暂无用户评价</p>
-                <p className="text-sm">成为第一个评价此商品的用户吧！</p>
+            {selectedTab === 'guarantee' && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="flex flex-col items-center text-center p-6 bg-blue-50 rounded-xl">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                    <Truck className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">全场包邮</h3>
+                  <p className="text-sm text-gray-600">所有商品均享受包邮服务，48小时内极速发货，让您无需等待。</p>
+                </div>
+                <div className="flex flex-col items-center text-center p-6 bg-green-50 rounded-xl">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                    <Shield className="w-6 h-6 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">无忧退换</h3>
+                  <p className="text-sm text-gray-600">支持7天无理由退换货，质量问题包退包换，购物更有保障。</p>
+                </div>
+                <div className="flex flex-col items-center text-center p-6 bg-purple-50 rounded-xl">
+                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                    <Package className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">正品保证</h3>
+                  <p className="text-sm text-gray-600">所有商品均为官方正品，假一赔十，严格把控商品质量。</p>
+                </div>
               </div>
             )}
           </div>
@@ -446,33 +462,18 @@ export function ProductDetailPage({
 
         {/* 推荐商品 */}
         {recommendedProducts.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-8">
-            <h2 className="text-2xl text-gray-900 mb-6">相关推荐</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-2xl text-gray-900 mb-4">相关推荐</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {recommendedProducts.map(p => (
-                <div
+                <ProductCard
                   key={p.id}
-                  onClick={() => onViewProduct(p)}
-                  className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-all cursor-pointer group"
-                >
-                  <div className="relative aspect-square overflow-hidden">
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <h3 className="text-sm text-gray-900 line-clamp-2 mb-2">{p.name}</h3>
-                    <div className="flex items-center justify-between">
-                      <span className="text-red-600">¥{p.price}</span>
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                        {p.rating}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  product={p}
+                  isFavorite={favorites.has(p.id)}
+                  onAddToCart={onAddToCart}
+                  onToggleFavorite={onToggleFavorite}
+                  onViewDetail={onViewProduct}
+                />
               ))}
             </div>
           </div>

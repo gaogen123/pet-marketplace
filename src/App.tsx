@@ -374,11 +374,16 @@ export default function App() {
 
     setSelectedProduct(product);
     setCurrentPage('detail');
+    // Update URL without reloading
+    const newUrl = `${window.location.pathname}?productId=${product.id}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
   };
 
   const handleBackToHome = () => {
     setCurrentPage('home');
     setSelectedProduct(null);
+    // Clear URL query params
+    window.history.pushState({ path: window.location.pathname }, '', window.location.pathname);
   };
 
   const defaultAddresses: Address[] = [
@@ -815,6 +820,7 @@ export default function App() {
             onToggleFavorite={toggleFavorite}
             allProducts={products}
             onViewProduct={handleViewDetail}
+            favorites={favorites}
           />
         )
       ) : currentPage === 'checkout' && currentOrder ? (

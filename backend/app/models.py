@@ -18,6 +18,7 @@ class User(Base):
     avatar = Column(String(255))
     role = Column(String(20), default="user")
     is_active = Column(Boolean, default=True)
+    vip_level_id = Column(String(36), ForeignKey("vip_levels.id"), nullable=True)
     register_time = Column(DateTime, default=datetime.utcnow)
     
     orders = relationship("Order", back_populates="user")
@@ -25,6 +26,21 @@ class User(Base):
     cart_items = relationship("CartItem", back_populates="user")
     favorites = relationship("Favorite", back_populates="user")
     search_history = relationship("SearchHistory", back_populates="user")
+    vip_level = relationship("VIPLevel", back_populates="users")
+
+class VIPLevel(Base):
+    __tablename__ = "vip_levels"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    name = Column(String(50), unique=True)
+    level = Column(Integer, unique=True)
+    discount = Column(Integer)
+    min_spend = Column(Float, default=0.0)
+    color = Column(String(20))
+    icon = Column(String(20))
+    benefits = Column(Text) # Store as JSON string
+    
+    users = relationship("User", back_populates="vip_level")
 
 class AdminUser(AdminBase):
     __tablename__ = "admin_users"
